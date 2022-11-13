@@ -8,6 +8,7 @@ import numpy
 import tflearn
 import pickle
 import tensorflow
+from datetime import datetime
 
 import nltk
 from nltk.stem.lancaster import LancasterStemmer
@@ -20,8 +21,28 @@ with open("intents.json") as file:
 
 words_list = []
 labels_list = []
+patient_attributes = {
+    "name": "John Smith",
+    "date_of_birth": "2021/01/01",
+    "gender": "Male",
+    "children": "Jack Smith, Jane Smith",
+    "spouse": "wife: Rachel Smith",
+    "residence": "Toronto, Ontario",
+    "hobbies": "swimming, cooking",
+    "hospital": "Toronto Western Hospital"
+}
+loved_one_attributes = {
+    "name": "Jack Smith",
+    "date_of_birth": "2021/01/02",
+    "gender": "Male",
+    "children": "",
+    "spouse": "",
+    "residence": "Toronto, Ontario",
+    "hobbies": "writing, reading"
+}
 
 def train_model(data):
+    # Add "x" below the try if modified intents.json to re-train the model
     try:
         with open("data.pickle", "rb") as f:
             words, labels, training, output = pickle.load(f)
@@ -110,6 +131,37 @@ def generate_response(model, inp):
                 responses = tg['responses']
 
         response = random.choice(responses)
+
+        if tag == "patientLocation":
+            response += patient_attributes["hospital"]
+        elif tag == "lovedOneAge":
+            year_of_birth = loved_one_attributes["date_of_birth"].split('/')[0]
+            current_year = datetime.now().year
+            age = current_year - int(year_of_birth)
+            response += str(age)
+        elif tag == "lovedOneLocation":
+            response += loved_one_attributes["residence"]
+        elif tag == "lovedOneName":
+            response += loved_one_attributes["name"]
+        elif tag == "lovedOneHobbies":
+            if loved_one_attributes["hobbies"] == "":
+                response = "I don't really have any hobbies"
+            else:
+                hobbies = loved_one_attributes["hobbies"].split(",")
+                for i in range(len(hobbies) - 1):
+                    response += hobbies[i] + ", "
+                if(len(hobbies) > 1):
+                    response += "and "
+                response += hobbies[len(hobbies) - 1]
+        elif tag == "lovedOneChildren":
+            if loved_one_attributes["children"] == "":
+                response = "I don't have kids"
+            else:
+                children = loved_one_attributes["children"].split(",")
+                if len(children) == 1:
+                    response += "1 kid. " +  children[0].split(" ")[0] + " is doing great."
+                else:
+                    response += str(len(children)) + " kids. They are doing great."
     else:
         responses = ["I see", "Mhmm", "Oh ok", "Yeah?"]
         response = random.choice(responses)
@@ -131,4 +183,4 @@ def group_of_words(s, words):
     return numpy.array(group)
 
 trained_model = train_model(data)[0]
-generate_response(trained_model, "where am i")
+generate_response(trained_model, "how old are you")
