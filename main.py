@@ -91,7 +91,6 @@ def train_model(data):
             training.append(group)
             output.append(out_row)
 
-
         training = numpy.array(training)
         output = numpy.array(output)
 
@@ -120,6 +119,49 @@ def train_model(data):
 
     return (model, data["intents"])
 
+def get_possible_responses():
+    responses = ["I see", "Mhmm", "Oh ok", "Yeah?"]
+
+    for intent in data["intents"]:
+        for response in intent["responses"]:
+            possible_response = add_personalized_info(intent["tag"], response)
+            responses.append(possible_response)
+
+    return responses
+
+def add_personalized_info(tag, response):
+    if tag == "patientLocation":
+        response += patient_attributes["hospital"]
+    elif tag == "lovedOneAge":
+        year_of_birth = loved_one_attributes["date_of_birth"].split('/')[0]
+        current_year = datetime.now().year
+        age = current_year - int(year_of_birth)
+        response += str(age)
+    elif tag == "lovedOneLocation":
+        response += loved_one_attributes["residence"]
+    elif tag == "lovedOneName":
+        response += loved_one_attributes["name"]
+    elif tag == "lovedOneHobbies":
+        if loved_one_attributes["hobbies"] == "":
+            response = "I don't really have any hobbies"
+        else:
+            hobbies = loved_one_attributes["hobbies"].split(",")
+            for i in range(len(hobbies) - 1):
+                response += hobbies[i] + ", "
+            if(len(hobbies) > 1):
+                response += "and "
+            response += hobbies[len(hobbies) - 1]
+    elif tag == "lovedOneChildren":
+        if loved_one_attributes["children"] == "":
+            response = "I don't have kids"
+        else:
+            children = loved_one_attributes["children"].split(",")
+            if len(children) == 1:
+                response += "1 kid. " +  children[0].split(" ")[0] + " is doing great."
+            else:
+                response += str(len(children)) + " kids. They are doing great."
+    return response
+
 def generate_response(model, inp):
     results = model.predict([group_of_words(inp, words_list)])[0]
     results_index = numpy.argmax(results)
@@ -131,37 +173,7 @@ def generate_response(model, inp):
                 responses = tg['responses']
 
         response = random.choice(responses)
-
-        if tag == "patientLocation":
-            response += patient_attributes["hospital"]
-        elif tag == "lovedOneAge":
-            year_of_birth = loved_one_attributes["date_of_birth"].split('/')[0]
-            current_year = datetime.now().year
-            age = current_year - int(year_of_birth)
-            response += str(age)
-        elif tag == "lovedOneLocation":
-            response += loved_one_attributes["residence"]
-        elif tag == "lovedOneName":
-            response += loved_one_attributes["name"]
-        elif tag == "lovedOneHobbies":
-            if loved_one_attributes["hobbies"] == "":
-                response = "I don't really have any hobbies"
-            else:
-                hobbies = loved_one_attributes["hobbies"].split(",")
-                for i in range(len(hobbies) - 1):
-                    response += hobbies[i] + ", "
-                if(len(hobbies) > 1):
-                    response += "and "
-                response += hobbies[len(hobbies) - 1]
-        elif tag == "lovedOneChildren":
-            if loved_one_attributes["children"] == "":
-                response = "I don't have kids"
-            else:
-                children = loved_one_attributes["children"].split(",")
-                if len(children) == 1:
-                    response += "1 kid. " +  children[0].split(" ")[0] + " is doing great."
-                else:
-                    response += str(len(children)) + " kids. They are doing great."
+        response = add_personalized_info(tag, response)
     else:
         responses = ["I see", "Mhmm", "Oh ok", "Yeah?"]
         response = random.choice(responses)
